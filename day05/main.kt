@@ -2,6 +2,17 @@ package day05
 
 import java.io.File
 
+enum class OpCode(val code: Int) {
+    ADD(1),
+    MULTIPLY(2),
+    READ(3),
+    WRITE(4),
+    JUMP_IF_TRUE(5),
+    JUMP_IF_FALSE(6),
+    LESS_THAN(7),
+    EQUALS(8)
+}
+
 fun main() {
     val program = loadProgram("input.txt")
     val memory = program.toMutableList()
@@ -14,8 +25,8 @@ fun loadProgram(file: String) = File(file).readText().trim().split(',').map(Stri
 fun runIntcode(code: MutableList<Int>) {
     var ip = 0
 
-    fun getOpcode(): Int {
-        return code[ip] % 100
+    fun getOpcode(): OpCode? {
+        return OpCode.values().firstOrNull { it.code == code[ip] % 100 }
     }
 
     fun getValue(offset: Int): Int {
@@ -27,37 +38,37 @@ fun runIntcode(code: MutableList<Int>) {
 
     while (ip < code.size) {
         when (getOpcode()) {
-            1 -> {
+            OpCode.ADD -> {
                 code[code[ip + 3]] = getValue(1) + getValue(2)
                 ip += 4
             }
-            2 -> {
+            OpCode.MULTIPLY -> {
                 code[code[ip + 3]] = getValue(1) * getValue(2)
                 ip += 4
             }
-            3 -> {
+            OpCode.READ -> {
                 code[code[ip + 1]] = readLine()!!.toInt()
                 ip += 2
             }
-            4 -> {
+            OpCode.WRITE -> {
                 print(getValue(1))
                 ip += 2
             }
-            5 -> {
+            OpCode.JUMP_IF_TRUE -> {
                 if (getValue(1) != 0) {
                     ip = getValue(2)
                 } else {
                     ip += 3
                 }
             }
-            6 -> {
+            OpCode.JUMP_IF_FALSE -> {
                 if (getValue(1) == 0) {
                     ip = getValue(2)
                 } else {
                     ip += 3
                 }
             }
-            7 -> {
+            OpCode.LESS_THAN -> {
                 if (getValue(1) < getValue(2)) {
                     code[code[ip + 3]] = 1
                 } else {
@@ -65,7 +76,7 @@ fun runIntcode(code: MutableList<Int>) {
                 }
                 ip += 4
             }
-            8 -> {
+            OpCode.EQUALS -> {
                 if (getValue(1) == getValue(2)) {
                     code[code[ip + 3]] = 1
                 } else {
