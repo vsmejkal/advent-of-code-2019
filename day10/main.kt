@@ -1,7 +1,6 @@
 package day10
 
 import javafx.geometry.Point2D
-import java.awt.Point
 import java.io.File
 import kotlin.math.atan2
 
@@ -12,7 +11,7 @@ fun main() {
     vaporizeAsteroids(asteroids, bestLocation)
 }
 
-fun vaporizeAsteroids(asteroids: Set<Point>, location: Point) {
+fun vaporizeAsteroids(asteroids: Set<Point2D>, location: Point2D) {
     val otherAsteroids = asteroids.minus(location).toMutableSet()
     var counter = 0
 
@@ -20,13 +19,13 @@ fun vaporizeAsteroids(asteroids: Set<Point>, location: Point) {
         getVisibleAsteroids(location, otherAsteroids).sortedBy {
             getAngleToLaser(it, location)
         }.forEach {
-            println("The ${++counter}. asteroid to be vaporized is at ${it.x},${it.y}")
+            println("${++counter}. asteroid to be vaporized is at ${it.x.toInt()},${it.y.toInt()}")
             otherAsteroids.remove(it)
         }
     }
 }
 
-fun getVisibleAsteroids(origin: Point, asteroids: Set<Point>): Set<Point> {
+fun getVisibleAsteroids(origin: Point2D, asteroids: Set<Point2D>): Set<Point2D> {
     val otherAsteroids = asteroids.minus(origin)
     val result = otherAsteroids.toMutableSet()
 
@@ -41,20 +40,20 @@ fun getVisibleAsteroids(origin: Point, asteroids: Set<Point>): Set<Point> {
     return result
 }
 
-fun isShadowedBy(asteroid1: Point, asteroid2: Point, origin: Point): Boolean {
-    if (asteroid1.distanceSq(origin) < asteroid2.distanceSq(origin)) {
+fun isShadowedBy(asteroid1: Point2D, asteroid2: Point2D, origin: Point2D): Boolean {
+    if (asteroid1.distance(origin) < asteroid2.distance(origin)) {
         return false
     }
 
-    val p1 = pointToOrigin(asteroid1, origin)
-    val p2 = pointToOrigin(asteroid2, origin)
+    val p1 = asteroid1.subtract(origin)
+    val p2 = asteroid2.subtract(origin)
 
     return  p1.x * p2.x >= 0 && p1.y * p2.y >= 0 && p1.x * p2.y == p2.x * p1.y
 }
 
-private fun getAngleToLaser(point: Point, location: Point): Double {
-    val laser = Point2D(1e-12, -1.0)
-    val target = normalize(pointToOrigin(point, location))
+private fun getAngleToLaser(point: Point2D, location: Point2D): Double {
+    val laser = Point2D(1e-12, -1.0).normalize()
+    val target = point.subtract(location).normalize()
 
     return atan2(
         (laser.x * target.y + laser.y * target.x),
@@ -62,25 +61,13 @@ private fun getAngleToLaser(point: Point, location: Point): Double {
     )
 }
 
-private fun normalize(vec: Point): Point2D {
-    val px = vec.x.toDouble()
-    val py = vec.y.toDouble()
-    val length = Math.sqrt(px * px + py * py)
-
-    return Point2D(px / length, py / length)
-}
-
-fun pointToOrigin(point: Point, origin: Point): Point {
-    return Point(point.x - origin.x, point.y - origin.y)
-}
-
-fun loadAsteroids(file: String): Set<Point> {
-    val asteroids = mutableSetOf<Point>()
+fun loadAsteroids(file: String): Set<Point2D> {
+    val asteroids = mutableSetOf<Point2D>()
 
     for ((y, line) in File(file).readLines().withIndex()) {
         for ((x, symbol) in line.trim().chunked(1).withIndex()) {
             if (symbol == "#") {
-                asteroids.add(Point(x, y))
+                asteroids.add(Point2D(x.toDouble(), y.toDouble()))
             }
         }
     }
