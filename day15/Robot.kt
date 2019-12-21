@@ -4,25 +4,44 @@ import java.awt.Point
 import java.math.BigInteger
 
 class Robot(program: List<BigInteger>) {
-    val position = Point(0, 0)
+    var position = Point(0, 0)
     private val computer = Computer(program)
 
-    fun move(direction: Movement): Status {
+    fun move(direction: Direction): Int {
         val directionCode = (direction.ordinal + 1).toBigInteger()
-        val statusCode = computer.run(directionCode)
+        val status = computer.run(directionCode)!!.toInt()
 
-        return Status.values().first { it.ordinal == statusCode?.toInt() }
+        if (status != Map.WALL) {
+            position = direction.move(position)
+        }
+
+        return status
     }
 
-    enum class Movement { NORTH, SOUTH, WEST, EAST;
-        val opposite: Movement
+    enum class Direction { NORTH, SOUTH, WEST, EAST;
+        val opposite: Direction
             get() = when (this) {
                 NORTH -> SOUTH
                 SOUTH -> NORTH
                 WEST -> EAST
                 EAST -> WEST
             }
+
+        fun move(position: Point): Point {
+            val (x, y) = Pair(position.x, position.y)
+
+            return when (this) {
+                NORTH -> Point(x, y - 1)
+                SOUTH -> Point(x, y + 1)
+                WEST -> Point(x - 1, y)
+                EAST -> Point(x + 1, y)
+            }
+        }
     }
 
-    enum class Status { WALL, FREE, OXYGEN }
+    object Map {
+        const val WALL = 0
+        const val FREE = 1
+        const val OXYGEN = 2
+    }
 }

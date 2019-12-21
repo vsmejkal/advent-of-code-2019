@@ -7,72 +7,85 @@ import java.math.BigInteger
 fun main() {
     val program = loadProgram("input.txt")
     val robot = Robot(program)
+    val map = createMap(robot)
+    val oxygenPosition = map.keys.first { map[it] == Robot.Map.OXYGEN }
+    val oxygenDistanceMap = createDistanceMap(oxygenPosition, map)
+
+    println("Oxygen system found at $oxygenPosition")
+    println("Distance to oxygen system is ${oxygenDistanceMap[Point(0, 0)]}")
+    println("Oxygen will fill the area in ${oxygenDistanceMap.values.max()} minutes")
+}
+
+fun createMap(robot: Robot): Map<Point, Int> {
     val origin = Point(0, 0)
-    val map = mutableMapOf(origin to 0)
+    val map = mutableMapOf(origin to Robot.Map.FREE)
+    val distanceMap = mutableMapOf(origin to 0)
     val queue = mutableListOf(origin)
-    var oxygenPosition: Point? = null
 
-    while (queue.isNotEmpty() && oxygenPosition == null) {
-        println(queue)
-
+    while (queue.isNotEmpty()) {
         val position = queue.removeAt(0)
-        moveRobotTo(robot, position, map)
+        moveRobotTo(robot, position, distanceMap)
 
-        Robot.Movement.values().forEach { direction ->
+        Robot.Direction.values().forEach { direction ->
             val status = robot.move(direction)
-            val newPosition = move(position, direction)
-            robot.move(direction.opposite)
+            val newPosition = direction.move(position)
 
-            when (status) {
-                Robot.Status.WALL -> {}
-                Robot.Status.FREE -> {
-                    if (newPosition !in map) {
-                        map[newPosition] = map[position]!! + 1
-                        queue.add(newPosition)
-                    }
+            if (status != Robot.Map.WALL) {
+                if (newPosition !in map) {
+                    queue.add(newPosition)
+                    distanceMap[newPosition] = distanceMap[position]!! + 1
                 }
-                Robot.Status.OXYGEN -> {
-                    oxygenPosition = newPosition
-                }
+                robot.move(direction.opposite)
+            }
+
+            map[newPosition] = status
+        }
+    }
+
+    return map
+}
+
+fun createDistanceMap(origin: Point, map: Map<Point, Int>): Map<Point, Int> {
+    val distMap = mutableMapOf(origin to 0)
+    val queue = mutableListOf(origin)
+
+    while (queue.isNotEmpty()) {
+        val position = queue.removeAt(0)
+
+        Robot.Direction.values().forEach { direction ->
+            val newPosition = direction.move(position)
+
+            if (map[newPosition] != Robot.Map.WALL && newPosition !in distMap) {
+                distMap[newPosition] = distMap[position]!! + 1
+                queue.add(newPosition)
             }
         }
     }
 
-    println("Oxygen found at $oxygenPosition")
+    return distMap
 }
 
-fun moveRobotTo(robot: Robot, position: Point, map: Map<Point, Int>) {
-    findPathToOrigin(robot.position, map).forEach { direction ->
-        robot.move(direction)
-    }
-    findPathToOrigin(position, map).reversed().forEach { direction ->
-        robot.move(direction.opposite)
-    }
-}
-
-fun findPathToOrigin(from: Point, map: Map<Point, Int>): List<Robot.Movement> {
-    val path = mutableListOf<Robot.Movement>()
+fun findPathFrom(from: Point, map: Map<Point, Int>): List<Robot.Direction> {
+    val path = mutableListOf<Robot.Direction>()
     var position = from
 
     while (map[position] != 0) {
-        val direction = Robot.Movement.values().minBy {
-            map[move(position, it)] ?: Int.MAX_VALUE
+        val direction = Robot.Direction.values().minBy {
+            map[it.move(position)] ?: Int.MAX_VALUE
         }
         path.add(direction!!)
-        position = move(position, direction)
+        position = direction.move(position)
     }
 
     return path
 }
 
-fun move(position: Point, direction: Robot.Movement): Point {
-    val (x, y) = Pair(position.x, position.y)
-
-    return when (direction) {
-        Robot.Movement.NORTH -> Point(x, y - 1)
-        Robot.Movement.SOUTH -> Point(x, y + 1)
-        Robot.Movement.WEST -> Point(x - 1, y)
-        Robot.Movement.EAST -> Point(x + 1, y)
+fun moveRobotTo(robot: Robot, position: Point, map: Map<Point, Int>) {
+    findPathFrom(robot.position, map).forEach { direction ->
+        robot.move(direction)
+    }
+    findPathFrom(position, map).reversed().forEach { direction ->
+        robot.move(direction.opposite)
     }
 }
 
