@@ -6,13 +6,18 @@ class Computer(program: List<BigInteger>) {
     val mem = mutableMapOf<Int, BigInteger>()
     var ip = 0
     var relativeBase = 0
-    var finished = false
+    var onInput: (() -> BigInteger)? = null
+    var onOutput: ((BigInteger) -> Unit)? = null
 
     init {
         program.withIndex().forEach { mem[it.index] = it.value }
     }
 
+    fun finished() = getOpcode() == OpCode.HALT
+
     fun run(input: BigInteger? = null): BigInteger? {
+        var inputParam = input
+
         while (ip < mem.size) {
             when (getOpcode()) {
                 OpCode.ADD -> {
@@ -24,16 +29,15 @@ class Computer(program: List<BigInteger>) {
                     ip += 4
                 }
                 OpCode.INPUT -> {
-                    if (input == null) return null
-                    println("Input: $input")
-                    mem[getAddr(1)] = input
+                    val inputValue = onInput?.invoke() ?: inputParam ?: return null
+                    inputParam = null
+                    mem[getAddr(1)] = inputValue
                     ip += 2
                 }
                 OpCode.OUTPUT -> {
-                    val output = getParam(1)
+                    val outputValue = getParam(1)
                     ip += 2
-                    println("Output: $output")
-                    return output
+                    onOutput?.invoke(outputValue) ?: return outputValue
                 }
                 OpCode.JUMP_IF_TRUE -> {
                     ip = if (getParam(1) != BigInteger.ZERO) {
@@ -70,7 +74,6 @@ class Computer(program: List<BigInteger>) {
                     ip += 2
                 }
                 OpCode.HALT -> {
-                    finished = true
                     return null
                 }
             }
